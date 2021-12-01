@@ -12,7 +12,7 @@ setuptools.setup(
     name='binance-candles',
     license="MIT",
     description='Provides python generator for crypto currency 1 min candles via Binance Socket API',
-    version='v0.0.1',
+    version='v0.0.2',
     long_description=README,
     url='https://github.com/shaypal5/chocobo',
     packages=setuptools.find_packages(),
