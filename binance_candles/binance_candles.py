@@ -59,7 +59,6 @@ class CandlesGenerator(ThreadedWebsocketManager):
         self.lock_active_candles.release()
 
     def collect_ready_candles(self):
-        print("collect_ready_candles")
         with self.lock_active_candles:
             new_candles = {}
             for candle in self.active_candles.values():
@@ -115,4 +114,3 @@ if __name__ == "__main__":
     for candles in candles_generator:
         for candle in candles:
             print(candle)
-    print("Exited")
