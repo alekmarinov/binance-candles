@@ -1,1 +1,1 @@
-from .binance_candles import CandlesGenerator, BufferedCandlesGenerator
+from .binance_candles import CandlesGenerator, Candle
