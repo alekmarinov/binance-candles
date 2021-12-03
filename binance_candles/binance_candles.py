@@ -1,3 +1,4 @@
+import logging
 import datetime
 from binance import ThreadedWebsocketManager
 from collections import deque
@@ -10,6 +11,7 @@ class Candle:
         self.price_open_dt = self.price_close_dt = None
 
     def update(self, price_dt, price):
+        logging.debug(f"{self.symbol} {price}")
         self.price_close_dt = price_dt
         self.price_close = price
 
@@ -90,6 +92,7 @@ class CandlesGenerator(ThreadedWebsocketManager):
                     self.completed_candles_cond.wait()
                 yield self.completed_candles.popleft()
 
+
 class BufferedCandlesGenerator(CandlesGenerator):
     def __init__(self, buffer_size):
         super().__init__()
@@ -101,7 +104,9 @@ class BufferedCandlesGenerator(CandlesGenerator):
             if candle.symbol not in self.buffer:
                 self.buffer[candle.symbol] = []
             self.buffer[candle.symbol].append(candle)
-            print(f"Collected {len(self.buffer[candle.symbol])} candles for {candle.symbol}")
+            print(
+                f"Collected {len(self.buffer[candle.symbol])} candles for {candle.symbol}"
+            )
             if len(self.buffer[candle.symbol]) >= self.buffer_size:
                 candles = self.buffer[candle.symbol]
                 self.buffer[candle.symbol] = []
