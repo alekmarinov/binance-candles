@@ -8,7 +8,7 @@ setuptools.setup(
     name="binance-candles",
     license="MIT",
     description="Provides python generator for crypto currency 1 min candles via Binance Socket API",
-    version="v0.2.0",
+    version="v0.2.1",
     url="https://github.com/alekmarinov/binance-candles",
     packages=setuptools.find_packages(),
     python_requires=">=3.6",

@@ -45,19 +45,22 @@ class Candle:
 
 
 class CandlesGenerator(ThreadedWebsocketManager):
-    def __init__(self, candles_handler):
+    def __init__(self, candles_handler, price_change_handler=None):
         super().__init__()
         self.active_candles = {}
         self.lock_active_candles = Lock()
         self.candles_handler = candles_handler
         self.stopped = Event()
+        self.price_change_handler = price_change_handler
 
     def price_handler(self, msg):
         data = msg["data"]
+        updated_symbols = []
         with self.lock_active_candles:
             for entry in data:
                 price_dt = datetime.datetime.fromtimestamp(entry["E"] / 1000)
                 symbol = entry["s"]
+                updated_symbols.append(symbol)
                 price = entry["i"]
                 if symbol not in self.active_candles:
                     candle = Candle(symbol)
@@ -65,7 +68,9 @@ class CandlesGenerator(ThreadedWebsocketManager):
                 else:
                     candle = self.active_candles[symbol]
                 candle.update(price_dt, price)
-        
+        if self.price_change_handler is not None:
+            self.price_change_handler(updated_symbols)
+
     def get_active_candle(self, symbol):
         with self.lock_active_candles:
             if symbol in self.active_candles:
