@@ -1,13 +1,19 @@
+import time
+import logging
 import datetime
+from decimal import Decimal
 from binance import ThreadedWebsocketManager
-from collections import deque
-from threading import Thread, Event, Condition, Lock
-
+from threading import Lock
 
 class Candle:
     def __init__(self, symbol):
         self.symbol = symbol
-        self.price_open_dt = self.price_close_dt = None
+        self.price_open_dt = None
+        self.price_close_dt = None
+        self.price_open = None
+        self.price_close = None
+        self.price_low = None
+        self.price_high = None
 
     def update(self, price_dt, price):
         self.price_close_dt = price_dt
@@ -24,9 +30,7 @@ class Candle:
 
     def generate_next(self):
         candle = Candle(self.symbol)
-        candle.price_open = (
-            candle.price_low
-        ) = candle.price_high = candle.price_close = self.price_close
+        candle.price_open = candle.price_low = candle.price_high = candle.price_close = self.price_close
         candle.price_open_dt = candle.price_close_dt = self.price_close_dt
         return candle
 
@@ -44,66 +48,49 @@ class Candle:
         return f"{str(self.price_open_dt)}-{str(self.price_close_dt)} {self.symbol} {self.price_open} {self.price_low} {self.price_high} {self.price_close}"
 
 
-class CandlesGenerator(ThreadedWebsocketManager):
-    def __init__(self, candles_handler, price_change_handler=None):
-        super().__init__()
-        self.active_candles = {}
-        self.lock_active_candles = Lock()
-        self.candles_handler = candles_handler
-        self.stopped = Event()
-        self.price_change_handler = price_change_handler
+def candles_generator(symbols=None, interval=60):
+    active_candles = {}
+    active_candles_lock = Lock()
 
-    def price_handler(self, msg):
+    def price_handler(symbols, msg):
+        if "e" in msg:
+            logging.error(msg["m"])
+            return
         data = msg["data"]
-        updated_symbols = []
-        with self.lock_active_candles:
+        with active_candles_lock:
+            if type(data) is dict:
+                data = [data]
             for entry in data:
-                price_dt = datetime.datetime.fromtimestamp(entry["E"] / 1000)
                 symbol = entry["s"]
-                updated_symbols.append(symbol)
-                price = entry["i"]
-                if symbol not in self.active_candles:
+                if symbols is not None:
+                    if type(symbols) == str:
+                        symbols = [symbols]
+                    if symbol not in symbols:
+                        return
+                price_dt = datetime.datetime.fromtimestamp(entry["E"] / 1000)
+                price = Decimal(entry["i"]) if "i" in entry else (Decimal(entry["a"]) + Decimal(entry["b"])) / 2
+                if symbol not in active_candles:
                     candle = Candle(symbol)
-                    self.active_candles[symbol] = candle
+                    active_candles[symbol] = candle
                 else:
-                    candle = self.active_candles[symbol]
+                    candle = active_candles[symbol]
                 candle.update(price_dt, price)
-        if self.price_change_handler is not None:
-            self.price_change_handler(updated_symbols)
 
-    def get_active_candle(self, symbol):
-        with self.lock_active_candles:
-            if symbol in self.active_candles:
-                return self.active_candles[symbol].copy()
+    def reset_candles(active_candles):
+        with active_candles_lock:
+            completed_candles = list(active_candles.values())
+            for candle in completed_candles:
+                active_candles[candle.symbol] = candle.generate_next()
+            return completed_candles
 
-    def collect_ready_candles(self):
-        completed_candles = []
-        with self.lock_active_candles:
-            new_candles = {}
-            for candle in self.active_candles.values():
-                completed_candles.append(candle)
-                new_candles[candle.symbol] = candle.generate_next()
-            self.active_candles = new_candles
-        if len(completed_candles) > 0:
-            self.candles_handler(completed_candles)
-
-    def start(self):
-        ThreadedWebsocketManager.start(self)
-        self.start_all_mark_price_socket(self.price_handler)
-
-        def loop():
-            while not self.stopped.wait(60):
-                self.collect_ready_candles()
-
-        Thread(target=loop).start()
-
-    def stop(self):
-        ThreadedWebsocketManager.stop(self)
-        self.stopped.set()
-
+    twm = ThreadedWebsocketManager()
+    twm.start()
+    twm.start_all_mark_price_socket(lambda msg: price_handler(symbols, msg))
+    while True:
+        time.sleep(interval)
+        yield reset_candles(active_candles)
 
 if __name__ == "__main__":
-    candles_generator = CandlesGenerator()
-    candles_generator.start()
-    for candle in candles_generator:
-        print(candle)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    for candles in candles_generator(symbols=["BTCUSDT"], interval=60):
+        print(",".join(map(str, candles)))

@@ -1,1 +1,5 @@
 *.egg-info/
+venv
+.vscode
+Pipfile
+__pycache__

@@ -1,25 +1,13 @@
 # Binance Candles
 
-Provides python generator for crypto currency 1 min candles via Binance Socket API
+Provides python generator for crypto currency candles via Binance Socket API
 
 ## CandlesGenerator example
 
 ```
-from binance_candles import CandlesGenerator
+from binance_candles import candles_generator
 
-candles_generator = CandlesGenerator()
-candles_generator.start()
-for candle in candles_generator:
-    print(candle)
-```
-
-
-## BufferedCandlesGenerator example
-
-```
-candles_generator = BufferedCandlesGenerator(2)
-candles_generator.start()
-for candles in candles_generator:
-    for candle in candles:
-        print(candle)
+# 1 min candles generator for symbol BTCUSDT
+for candles in candles_generator(symbols=["BTCUSDT"], interval=60):
+    print(",".join(map(str, candles)))
 ```
