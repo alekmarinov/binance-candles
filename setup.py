@@ -16,7 +16,7 @@ with io.open("README.md") as fd:
         url="https://github.com/alekmarinov/binance-candles",
         packages=setuptools.find_packages(),
         python_requires=">=3.6",
-        install_requires=["python-binance==1.0.17"],
+        install_requires=["python-binance>=1.0"],
         classifiers=[
             "Development Status :: 5 - Production/Stable",
             "License :: OSI Approved :: MIT License",
