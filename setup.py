@@ -12,7 +12,7 @@ with io.open("README.md") as fd:
         description="Provides python generator for crypto currency candles via Binance Socket API",
         long_description=fd.read(),
         long_description_content_type="text/markdown",
-        version="v1.0.0",
+        version="v1.0.1",
         url="https://github.com/alekmarinov/binance-candles",
         packages=setuptools.find_packages(),
         python_requires=">=3.6",
